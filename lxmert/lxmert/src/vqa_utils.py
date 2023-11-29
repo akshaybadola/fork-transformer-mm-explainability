@@ -40,7 +40,10 @@ from tqdm.auto import tqdm
 
 import cv2
 import requests
-import wget
+try:
+    import wget
+except Exception:
+    pass
 from filelock import FileLock
 from yaml import Loader, dump, load
 

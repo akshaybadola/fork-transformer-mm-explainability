@@ -212,7 +212,10 @@ class GeneratorOurs:
         self.attn_grads_i_t.append(grad_i_t)
         return R_i_t_addition, R_i_i_addition
 
-    def generate_ours(self, input, index=None, use_lrp=True, normalize_self_attention=True, apply_self_in_rule_10=True, method_name="ours"):
+    def generate_ours(self, input, index=None, use_lrp=True,
+                      normalize_self_attention=True, apply_self_in_rule_10=True,
+                      method_name="ours", device=None):
+        device = device or "cuda"
         self.use_lrp = use_lrp
         self.normalize_self_attention = normalize_self_attention
         self.apply_self_in_rule_10 = apply_self_in_rule_10
@@ -244,7 +247,7 @@ class GeneratorOurs:
         one_hot[0, index] = 1
         one_hot_vector = one_hot
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-        one_hot = torch.sum(one_hot.cuda() * output)
+        one_hot = torch.sum(one_hot.to(device) * output)
 
         model.zero_grad()
         one_hot.backward(retain_graph=True)
@@ -357,7 +360,7 @@ class GeneratorOurs:
         # one_hot[0, index] = 1
         # one_hot_vector = one_hot
         # one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-        # one_hot = torch.sum(one_hot.cuda() * output)
+        # one_hot = torch.sum(one_hot.to(device) * output)
 
         model.zero_grad()
         # with torch
@@ -532,7 +535,10 @@ class GeneratorOursAblationNoAggregation:
         R_i_t_addition, R_i_i_addition = apply_mm_attention_rules(self.R_i_i, self.R_t_t, self.R_t_i, cam_i_t, apply_normalization=self.normalize_self_attention)
         return R_i_t_addition, R_i_i_addition
 
-    def generate_ours_no_agg(self, input, index=None, use_lrp=False, normalize_self_attention=True, method_name="ours_no_agg"):
+    def generate_ours_no_agg(self, input, index=None, use_lrp=False,
+                             normalize_self_attention=True, method_name="ours_no_agg",
+                             device=None):
+        device = device or "cuda"
         self.use_lrp = use_lrp
         self.normalize_self_attention = normalize_self_attention
         kwargs = {"alpha": 1}
@@ -560,7 +566,7 @@ class GeneratorOursAblationNoAggregation:
         one_hot[0, index] = 1
         one_hot_vector = one_hot
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-        one_hot = torch.sum(one_hot.cuda() * output)
+        one_hot = torch.sum(one_hot.to(device) * output)
 
         model.zero_grad()
         one_hot.backward(retain_graph=True)
@@ -645,7 +651,7 @@ class GeneratorBaselines:
         one_hot[0, index] = 1
         one_hot_vector = one_hot
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-        one_hot = torch.sum(one_hot.cuda() * output)
+        one_hot = torch.sum(one_hot.to(device) * output)
 
         model.zero_grad()
         one_hot.backward(retain_graph=True)
@@ -818,7 +824,7 @@ class GeneratorBaselines:
         one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
         one_hot[0, index] = 1
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-        one_hot = torch.sum(one_hot.cuda() * output)
+        one_hot = torch.sum(one_hot.to(device) * output)
 
         model.zero_grad()
         one_hot.backward(retain_graph=True)
