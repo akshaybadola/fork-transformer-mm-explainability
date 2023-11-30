@@ -97,8 +97,8 @@ class ModelUsage:
         return self.output
 
 
-def save_image_vis(model_lrp, image_file_path, image_scores):
-    bbox_scores = image_scores
+def save_image_vis(model_lrp, image_file_path, bbox_scores):
+    # bbox_scores = image_scores
     _, top_bboxes_indices = bbox_scores.topk(k=1, dim=-1)
     img = cv2.imread(image_file_path)
     mask = torch.zeros(img.shape[0], img.shape[1])
@@ -111,12 +111,12 @@ def save_image_vis(model_lrp, image_file_path, image_scores):
     mask = mask.unsqueeze_(-1)
     mask = mask.expand(img.shape)
     img = img * mask.cpu().data.numpy()
-    cv2.imwrite('./vis.jpg', img)
+    cv2.imwrite('lxmert/lxmert/experiments/paper/new.jpg', img)
 
 
-def test_save_image_vis(model_lrp, image_file_path, image_scores):
+def test_save_image_vis(model_lrp, image_file_path, bbox_scores):
     # print(bbox_scores)
-    bbox_scores = image_scores
+    # bbox_scores = image_scores
     _, top_bboxes_indices = bbox_scores.topk(k=5, dim=-1)
 
     img = cv2.imread(image_file_path)
@@ -238,26 +238,25 @@ def spectral_stuff():
     URL = 'lxmert/lxmert/experiments/paper/{0}/{0}.jpg'.format(image_ids[0])
     # URL = 'giraffe.jpg'
 
-    R_t_t, R_t_i = lrp.generate_ours((URL, test_questions_for_images[0]),
-                                     use_lrp=False, normalize_self_attention=True,
-                                     method_name="ours", device=DEVICE)
-    text_scores = R_t_t[0]
+    R_t_t, R_t_i = lrp.generate_ours_dsm((URL, test_questions_for_images[0]), sign_method="mean", use_lrp=False, 
+                                         normalize_self_attention=True, method_name="dsm")
+    text_scores = R_t_t
 
-    final_attn_map = lrp.attn_t_i[-1].cpu()
-    W = torch.cat( (final_attn_map, torch.zeros( final_attn_map.shape[1] - final_attn_map.shape[0],
-                                                 final_attn_map.shape[1])), dim=0)
-    W = torch.where( W > 5e-5, 1, 0 )
-    D = torch.zeros(W.shape[0], W.shape[1])
-    for i in range(D.shape[0]):
-        D[i, i] = torch.sum(D[i])
-    L = D - W
-    eig_vals, eig_vecs = torch.linalg.eig(L)
-    eig_vals = eig_vals.real
-    eig_vecs = eig_vecs.real
-    result, indices = torch.sort(eig_vals)
+    # final_attn_map = lrp.attn_t_i[-1].cpu()
+    # W = torch.cat( (final_attn_map, torch.zeros( final_attn_map.shape[1] - final_attn_map.shape[0],
+    #                                              final_attn_map.shape[1])), dim=0)
+    # W = torch.where( W > 5e-5, 1, 0 )
+    # D = torch.zeros(W.shape[0], W.shape[1])
+    # for i in range(D.shape[0]):
+    #     D[i, i] = torch.sum(D[i])
+    # L = D - W
+    # eig_vals, eig_vecs = torch.linalg.eig(L)
+    # eig_vals = eig_vals.real
+    # eig_vecs = eig_vecs.real
+    # result, indices = torch.sort(eig_vals)
 
-    URL = 'lxmert/lxmert/experiments/paper/{0}/{0}.jpg'.format(image_ids[0])
-    image_scores = eig_vecs[0]
+    # URL = 'lxmert/lxmert/experiments/paper/{0}/{0}.jpg'.format(image_ids[0])
+    image_scores = R_t_i
     test_save_image_vis(model_lrp, URL, image_scores)
 
 
