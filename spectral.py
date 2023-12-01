@@ -97,7 +97,7 @@ class ModelUsage:
         return self.output
 
 
-def save_image_vis(model_lrp, image_file_path, bbox_scores):
+def save_image_vis(model_lrp, image_file_path, bbox_scores, img_path):
     # bbox_scores = image_scores
     _, top_bboxes_indices = bbox_scores.topk(k=1, dim=-1)
     img = cv2.imread(image_file_path)
@@ -106,12 +106,12 @@ def save_image_vis(model_lrp, image_file_path, bbox_scores):
         [x, y, w, h] = model_lrp.bboxes[0][index]
         curr_score_tensor = mask[int(y):int(h), int(x):int(w)]
         new_score_tensor = torch.ones_like(curr_score_tensor)*bbox_scores[index].item()
-        mask[int(y):int(h), int(x):int(w)] = torch.max(new_score_tensor,mask[int(y):int(h), int(x):int(w)])
+        mask[int(y):int(h), int(x):int(w)] = torch.max(new_score_tensor, mask[int(y):int(h), int(x):int(w)])
     mask = (mask - mask.min()) / (mask.max() - mask.min())
     mask = mask.unsqueeze_(-1)
     mask = mask.expand(img.shape)
     img = img * mask.cpu().data.numpy()
-    cv2.imwrite('lxmert/lxmert/experiments/paper/new.jpg', img)
+    cv2.imwrite(img_path, img)
 
 
 def test_save_image_vis(model_lrp, image_file_path, bbox_scores):
@@ -235,48 +235,40 @@ def spectral_stuff():
         "did the man just catch the frisbee?"
         ################## paper samples
     ]
-    URL = 'lxmert/lxmert/experiments/paper/{0}/{0}.jpg'.format(image_ids[0])
-    # URL = 'giraffe.jpg'
+    for img_id in image_ids:
+        URL = f"lxmert/lxmert/experiments/paper/{img_id}/{img_id}.jpg"
 
-    R_t_t, R_t_i = lrp.generate_ours_dsm((URL, test_questions_for_images[0]), sign_method="mean", use_lrp=False, 
-                                         normalize_self_attention=True, method_name="dsm")
-    text_scores = R_t_t
+        R_t_t, R_t_i = lrp.generate_ours_dsm((URL, test_questions_for_images[0]),
+                                             sign_method="mean",
+                                             use_lrp=False,
+                                             normalize_self_attention=True,
+                                             method_name="dsm")
+        text_scores = R_t_t
 
-    # final_attn_map = lrp.attn_t_i[-1].cpu()
-    # W = torch.cat( (final_attn_map, torch.zeros( final_attn_map.shape[1] - final_attn_map.shape[0],
-    #                                              final_attn_map.shape[1])), dim=0)
-    # W = torch.where( W > 5e-5, 1, 0 )
-    # D = torch.zeros(W.shape[0], W.shape[1])
-    # for i in range(D.shape[0]):
-    #     D[i, i] = torch.sum(D[i])
-    # L = D - W
-    # eig_vals, eig_vecs = torch.linalg.eig(L)
-    # eig_vals = eig_vals.real
-    # eig_vecs = eig_vecs.real
-    # result, indices = torch.sort(eig_vals)
+        fname = f"{img_id}.jpg"
+        image_scores = R_t_i
+        test_save_image_vis(model_lrp, URL, image_scores)
 
-    # URL = 'lxmert/lxmert/experiments/paper/{0}/{0}.jpg'.format(image_ids[0])
-    image_scores = R_t_i
-    test_save_image_vis(model_lrp, URL, image_scores)
+        save_image_vis(model_lrp, URL, image_scores, fname)
+        orig_image = Image.open(model_lrp.image_file_path)
 
+        fig, axs = plt.subplots(ncols=2, figsize=(20, 5))
+        axs[0].imshow(orig_image)
+        axs[0].axis('off')
+        axs[0].set_title('original')
 
-    save_image_vis(model_lrp, URL, image_scores)
-    orig_image = Image.open(model_lrp.image_file_path)
+        masked_image = Image.open(fname)
+        axs[1].imshow(masked_image)
+        axs[1].axis('off')
+        axs[1].set_title('masked')
 
-    fig, axs = plt.subplots(ncols=2, figsize=(20, 5))
-    axs[0].imshow(orig_image)
-    axs[0].axis('off')
-    axs[0].set_title('original')
-
-    masked_image = Image.open('lxmert/lxmert/experiments/paper/new.jpg')
-    axs[1].imshow(masked_image)
-    axs[1].axis('off')
-    axs[1].set_title('masked')
-
-    text_scores = (text_scores - text_scores.min()) / (text_scores.max() - text_scores.min())
-    vis_data_records = [visualization.VisualizationDataRecord(text_scores,0,0,0,0,0,model_lrp.question_tokens,1)]
-    visualization.visualize_text(vis_data_records)
-    print("ANSWER:", vqa_answers[model_lrp.output.question_answering_score.argmax()])
+        text_scores = (text_scores - text_scores.min()) / (text_scores.max() - text_scores.min())
+        vis_data_records = [visualization.VisualizationDataRecord(
+            text_scores, 0, 0, 0, 0, 0, model_lrp.question_tokens,1)]
+        html = visualization.visualize_text(vis_data_records)
+        with open(f"visualization_{fname}.html", "w") as f:
+            f.write(html.data)
+        print("ANSWER:", vqa_answers[model_lrp.output.question_answering_score.argmax()])
 
 
 if __name__ == '__main__':
